@@ -517,7 +517,7 @@ if (isset($_GET['download'])) {
                                 value="<?= htmlspecialchars($_POST['organization'] ?? '') ?>" placeholder=" "
                                 required />
                             <label class="field-label" for="organization">Organization Name</label>
-                            <div class="field-hint">Contoh: Universitas Tanjungpura</div>
+                            <div class="field-hint">Contoh: Universitas Muhammadiyah Pontianak</div>
                         </div>
 
                         <!-- Common Name (full width) -->
@@ -533,7 +533,7 @@ if (isset($_GET['download'])) {
                             <input type="text" id="common_name" name="common_name" class="field-input"
                                 value="<?= htmlspecialchars($_POST['common_name'] ?? '') ?>" placeholder=" " required />
                             <label class="field-label" for="common_name">Common Name / Domain</label>
-                            <div class="field-hint">Contoh: www.fabian-portofolio.com</div>
+                            <div class="field-hint">Contoh: www.akbar-portofolio.com</div>
                         </div>
 
                     </div><!-- /form-grid -->
