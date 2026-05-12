@@ -10,11 +10,76 @@
  * ============================================================
  */
 
+// ─── HELPER FUNCTION: Auto-detect OpenSSL Config Path ──────
+/**
+ * Mencari lokasi openssl.cnf dari berbagai direktori
+ * Mendukung: Windows XAMPP, Linux, macOS, Laragon, Cloud Hosting
+ * 
+ * @return string|null Path ke openssl.cnf atau null jika tidak ditemukan
+ */
+function getOpenSSLConfigPath() {
+    // 1. Cek environment variable (custom path dari admin)
+    if (!empty(getenv('OPENSSL_CONF'))) {
+        $envPath = getenv('OPENSSL_CONF');
+        if (file_exists($envPath)) {
+            return $envPath;
+        }
+    }
+    
+    // 2. Definisikan kemungkinan lokasi berdasarkan OS & server setup
+    $possiblePaths = [
+        // Windows - XAMPP
+        'C:/xampp/php/extras/ssl/openssl.cnf',
+        'C:/xampp/apache/conf/openssl.cnf',
+        'C:/xampp/php/extras/openssl/openssl.cnf',
+        
+        // Windows - Laragon
+        'C:/laragon/bin/apache/openssl.cnf',
+        'C:/laragon/bin/php/extras/ssl/openssl.cnf',
+        
+        // Windows - Alternative paths
+        'C:/php/extras/ssl/openssl.cnf',
+        'C:/php/openssl.cnf',
+        
+        // Linux / macOS
+        '/etc/ssl/openssl.cnf',
+        '/usr/local/etc/openssl/openssl.cnf',
+        '/etc/openssl/openssl.cnf',
+        '/usr/lib/ssl/openssl.cnf',
+        '/usr/share/ssl/openssl.cnf',
+        
+        // Cloud Hosting
+        '/usr/local/openssl/openssl.cnf',
+        '/opt/openssl/openssl.cnf',
+    ];
+    
+    // 3. Iterasi dan cari file yang ada
+    foreach ($possiblePaths as $path) {
+        if (file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    // 4. Jika tidak ditemukan, return null (OpenSSL akan pakai default)
+    return null;
+}
+
 // Inisialisasi variabel output
 $privateKey = '';
 $certificate = '';
 $error = '';
 $success = false;
+
+// Ambil OpenSSL config path
+$opensslConfigPath = getOpenSSLConfigPath();
+
+// Debug info (untuk development)
+$openSSLInfo = [
+    'version' => OPENSSL_VERSION_TEXT,
+    'config_path' => $opensslConfigPath ? $opensslConfigPath : 'Using system default',
+    'config_found' => $opensslConfigPath ? 'Yes' : 'No (fallback ke default sistem)',
+];
+
 
 // ─── PROSES GENERATE SSL ─────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,20 +100,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
 
         // ── STEP 1: Buat RSA Private Key (2048-bit) ──────────
-        // $privKeyConfig = [
-        //     'private_key_bits' => 2048,
-        //     'private_key_type' => OPENSSL_KEYTYPE_RSA,
-        // ];
-
-        // Xampp 
-        $opensslConfigPath = 'C:/xampp/php/extras/ssl/openssl.cnf';
-
         $privKeyConfig = [
             'digest_alg' => 'sha256',
             'private_key_bits' => 2048,
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
-            'config' => $opensslConfigPath
         ];
+        
+        // Tambahkan config path jika ditemukan
+        if ($opensslConfigPath) {
+            $privKeyConfig['config'] = $opensslConfigPath;
+        }
+        
         $privKeyResource = openssl_pkey_new($privKeyConfig);
 
         if (!$privKeyResource) {
@@ -69,17 +131,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
 
             // ── STEP 3: Buat CSR (Certificate Signing Request) ─
-            // $csr = openssl_csr_new($dn, $privKeyResource, ['digest_alg' => 'sha256']);
-
-            // Xampp
-            $csr = openssl_csr_new(
-                $dn,
-                $privKeyResource,
-                [
-                    'digest_alg' => 'sha256',
-                    'config' => $opensslConfigPath
-                ]
-            );
+            $csrConfig = [
+                'digest_alg' => 'sha256',
+            ];
+            
+            // Tambahkan config path jika ditemukan
+            if ($opensslConfigPath) {
+                $csrConfig['config'] = $opensslConfigPath;
+            }
+            
+            $csr = openssl_csr_new($dn, $privKeyResource, $csrConfig);
 
             if (!$csr) {
                 $error = 'Gagal membuat CSR: ' . openssl_error_string();
@@ -87,19 +148,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // ── STEP 4: Sign CSR → Self-Signed Certificate ─
                 // Masa berlaku: 365 hari
-                // $x509 = openssl_csr_sign($csr, null, $privKeyResource, 365, ['digest_alg' => 'sha256']);
-
-                // Xampp
+                $signConfig = [
+                    'digest_alg' => 'sha256',
+                    'x509_extensions' => 'v3_ca',
+                ];
+                
+                // Tambahkan config path jika ditemukan
+                if ($opensslConfigPath) {
+                    $signConfig['config'] = $opensslConfigPath;
+                }
+                
                 $x509 = openssl_csr_sign(
                     $csr,
                     null,
                     $privKeyResource,
                     365,
-                    [
-                        'digest_alg' => 'sha256',
-                        'x509_extensions' => 'v3_ca',
-                        'config' => $opensslConfigPath
-                    ],
+                    $signConfig,
                     0
                 );
 
@@ -123,9 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $privKeyResource,
                         $privateKey,
                         null,
-                        [
-                            'config' => $opensslConfigPath
-                        ]
+                        $opensslConfigPath ? ['config' => $opensslConfigPath] : []
                     );
 
                     if ($x509Export && $pkeyExport) {

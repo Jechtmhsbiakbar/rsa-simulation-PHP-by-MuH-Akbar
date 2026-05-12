@@ -235,17 +235,42 @@ git clone <repository-url>
 cd rsa-simulation-PHP-by-MuH-Akbar
 ```
 
-**2. Konfigurasi OpenSSL (untuk Windows XAMPP)**
+**2. Konfigurasi OpenSSL (Auto-detect Multi-Platform)**
 
-File `openssl.cnf` biasanya ada di:
-```
-C:/xampp/apache/conf/openssl.cnf
-C:/xampp/php/extras/ssl/openssl.cnf
-```
+Aplikasi sudah dilengkapi dengan **auto-detection function** yang mencari `openssl.cnf` dari berbagai lokasi:
 
-Aplikasi sudah auto-detect, tapi jika tidak ditemukan set manual:
+**Windows:**
+- `C:/xampp/php/extras/ssl/openssl.cnf`
+- `C:/xampp/apache/conf/openssl.cnf`
+- `C:/laragon/bin/apache/openssl.cnf`
+- `C:/laragon/bin/php/extras/ssl/openssl.cnf`
+
+**Linux/macOS:**
+- `/etc/ssl/openssl.cnf`
+- `/usr/local/etc/openssl/openssl.cnf`
+- `/etc/openssl/openssl.cnf`
+- `/usr/lib/ssl/openssl.cnf`
+
+**Cloud Hosting:**
+- Environment variable `OPENSSL_CONF`
+- System default (fallback)
+
+**Cara Kerja:**
+1. ✅ Aplikasi otomatis mencari file `openssl.cnf`
+2. ✅ Jika ditemukan → langsung digunakan
+3. ✅ Jika tidak ditemukan → gunakan default sistem
+4. ✅ Bisa di-override via environment variable
+
+**Manual Setup (jika perlu):**
 ```php
+// Di awal PHP file atau .htaccess
 putenv("OPENSSL_CONF=/path/to/openssl.cnf");
+```
+
+**Debug/Check Konfigurasi:**
+```
+Akses: http://localhost:8000/SSL_Generator/info.php
+(Halaman ini menampilkan OpenSSL config yang terdeteksi)
 ```
 
 **3. Buat Folder untuk Tugas 2 (Digital Signature)**
@@ -588,7 +613,100 @@ InfinityFree adalah layanan free hosting yang memiliki beberapa keterbatasan, kh
 
 ---
 
-## 📄 Lisensi
+## � Troubleshooting & FAQ
+
+### ⚠️ OpenSSL Configuration Error
+
+**Error: "Gagal membuat RSA Private Key" / "Gagal membuat CSR"**
+
+**Penyebab:** OpenSSL config path tidak valid atau tidak ditemukan
+
+**Solusi:**
+
+1. **Check Konfigurasi (Debug Page):**
+   ```
+   Kunjungi: http://localhost:8000/SSL_Generator/info.php
+   Halaman ini menampilkan OpenSSL config yang terdeteksi di sistem
+   ```
+
+2. **Manual Set Environment Variable:**
+   
+   Tambahkan di awal file `SSL_Generator/index.php`:
+   ```php
+   putenv("OPENSSL_CONF=C:/xampp/php/extras/ssl/openssl.cnf");
+   // atau
+   putenv("OPENSSL_CONF=/etc/ssl/openssl.cnf");
+   ```
+
+3. **Via .htaccess (Apache):**
+   ```apache
+   SetEnv OPENSSL_CONF /path/to/openssl.cnf
+   ```
+
+4. **Hosting Web - Hubungi Provider:**
+   - Minta lokasi `openssl.cnf` di server
+   - Atau minta enable OpenSSL extension
+   - Atau gunakan hosting dengan OpenSSL support (lihat bagian "Live Demo")
+
+### ❌ "Private Key tidak ditemukan" (Tugas 2)
+
+**Penyebab:** File keys belum digenerate
+
+**Solusi:**
+1. Buka halaman Tugas 2 (Digital Signature Verifier)
+2. Klik tombol "Generate Key Pair"
+3. Tunggu hingga selesai
+4. Cek folder `verifikatordokumen/keys/` sudah ada file `private_key.pem` dan `public_key.pem`
+
+### ❌ "Gagal menyimpan key ke file"
+
+**Penyebab:** Permission folder `keys/` tidak cukup
+
+**Solusi Windows:**
+```
+1. Right-click folder verifikatordokumen/keys/
+2. Properties → Security → Edit
+3. Grant "Modify" permission untuk user yang sedang aktif
+```
+
+**Solusi Linux/macOS:**
+```bash
+chmod 755 verifikatordokumen/keys
+chmod 644 verifikatordokumen/keys/*.pem
+```
+
+### 🟠 "Your connection is not private" (Tugas 3)
+
+**Penyebab:** Certificate adalah self-signed, bukan dari CA terpercaya
+
+**Catatan:** Ini adalah **behavior normal** untuk self-signed certificates
+
+**Solusi untuk Development:**
+- Click "Advanced" → "Proceed to site" di browser (aman untuk dev)
+
+**Solusi untuk Production:**
+- Gunakan Let's Encrypt atau CA terpercaya lainnya (lihat bagian "Live Demo")
+
+### ✅ Verifikasi Instalasi
+
+Untuk memastikan semuanya berjalan baik, cek:
+
+1. **Akses ketiga modul:**
+   - ✅ `http://localhost:8000/rsa-simulation/`
+   - ✅ `http://localhost:8000/verifikatordokumen/`
+   - ✅ `http://localhost:8000/SSL_Generator/`
+
+2. **Debug OpenSSL:**
+   - ✅ `http://localhost:8000/SSL_Generator/info.php`
+   - ✅ `http://localhost:8000/verifikatordokumen/info.php`
+
+3. **Halaman php info:**
+   - ✅ `http://localhost:8000/phpinfo.php` (create jika perlu)
+   - ✅ Cek bahwa OpenSSL extension ter-load (CTRL+F: "openssl")
+
+---
+
+## �📄 Lisensi
 
 Proyek ini adalah tugas akademik dan tersedia untuk keperluan edukasi.
 
